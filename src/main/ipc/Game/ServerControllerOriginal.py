@@ -10,10 +10,12 @@ if PyQT:
 else:
     from PySide.QtCore import *
     from PySide.QtGui import *
-    from src.main import ServerView
+    from ipc.Game import ServerView
 
 from enum import Enum
 import random
+import time
+
 
 class FieldType(Enum):
     GRASS = 0
@@ -208,10 +210,10 @@ class ServerController(QWidget):
                 self.showError("Bitte geben Sie einen gültigen Port ein!")
         else:
             self.serversocket.close()
-            if hasattr(self, "client1"):
+            if hasattr(self,"client1"):
                 self.client1.close()
                 self.shuffle = True
-            if hasattr(self, "client2"):
+            if hasattr(self,"client2"):
                 self.client2.close()
                 self.shuffle = True
             self.myForm.listClients.clear()
@@ -319,9 +321,6 @@ class ServerController(QWidget):
         skip2 = False
         while True:
             # ggf. Zug ueberspringen, falls Berg bestiegen wurde
-            print("Running throw Game-Loop")
-            print("Player1 Location: ", self.player1)
-            print("Player2 Location: ", self.player2)
             if not skip1:
                 data = self.client1.recv(1024).decode()
                 if data == CommandType.UP.value:
@@ -329,9 +328,9 @@ class ServerController(QWidget):
                 elif data == CommandType.DOWN.value:
                     self.player1 = ((self.player1[0]+1) % self.rows, self.player1[1])
                 elif data == CommandType.RIGHT.value:
-                    self.player1 = (self.player1[0], (self.player1[1]+1) % self.cols)
+                    self.player1 = (self.player1[0],(self.player1[1]+1) % self.cols)
                 elif data == CommandType.LEFT.value:
-                    self.player1 = (self.player1[0], (self.player1[1]-1) % self.cols)
+                    self.player1 = (self.player1[0],(self.player1[1]-1) % self.cols)
                 if self.field[self.player1[0]][self.player1[1]] == FieldType.MOUNTAIN:
                     skip1 = True
             else:
@@ -350,6 +349,7 @@ class ServerController(QWidget):
                     skip2 = True
             else:
                 skip2 = False
+            time.sleep(0.5)
             # Pruefen, ob Spieler 1 oder Spieler 2 gewonnen bzw. verloren haben
             check1= self.check_position(self.player1, 1)
             check2= self.check_position(self.player2, 2)
@@ -382,7 +382,7 @@ class ServerController(QWidget):
                     self.client2.send(msg.encode())
                 self.msgsignal.emit()
 
-    def check_position(self, position, number):
+    def check_position(self,position, number):
         """
         Prueft die aktuelle Position und ermittelt, ob das
         Spiel gewonnen oder verloren wurde.
@@ -441,14 +441,8 @@ class ServerController(QWidget):
                 self.client2.close()
         event.accept()
 
-    def autoStart(self):
-        self.myForm.linePort.setText("5050")
-        self.bind_and_listen()
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     c = ServerController()
-    c.autoStart()
-    # c.show()
-    c.showMinimized()
+    c.show()
     sys.exit(app.exec_())
