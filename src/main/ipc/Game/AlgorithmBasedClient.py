@@ -26,6 +26,7 @@ class FieldType(Enum):
 sight_for_type = {FieldType.GRASS: 2, FieldType.CASTLE: 1, FieldType.FOREST: 1, FieldType.MOUNTAIN: 3,
                   FieldType.LAKE: 0, FieldType.BOMB: 10}
 
+automatic = True
 
 def move_with_command(known_spaces, current_location, command):
     x, y = current_location
@@ -135,15 +136,16 @@ class AlgorithmBasedClient:
                     while True:
                         if self.rec_fields(clientsocket):
                             break
-                        if clientsocket is not None:
-                            clientsocket.send(CommandType.UP.value.encode())
-                        time.sleep(5)
+
                         print("--NEW-ROUND")
                         print("\tLocation: ", self.my_location)
-
                         next_step = self.eval_next_step()
                         print("\tNext Step: ", next_step.value)
                         self.my_location = move_with_command(self.my_spaces, self.my_location, next_step)
+                        if not automatic:
+                            msg = input("Send this step to server? (Y/n) ")
+                            if msg.lower() == "n" or msg.lower() == "no" or msg.lower() == "nein":
+                                break
                         clientsocket.send(next_step.value.encode())
 
             except socket.error as serr:

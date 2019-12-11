@@ -410,6 +410,7 @@ class ServerController(QWidget):
             else:
                 self.player2bomb = True
                 print("Player 2 got the scroll")
+            return 1
 
         return 0
 
