@@ -6,7 +6,6 @@ import time
 import uuid
 from enum import Enum
 
-
 class CommandType(Enum):
     UP = "up"
     RIGHT = "right"
@@ -20,48 +19,21 @@ class FieldType(Enum):
     FOREST = 'F'
     MOUNTAIN = 'M'
     LAKE = 'L'
-    BOMB = 'B'
+    SCROLL = 'B'
 
 
 sight_for_type = {FieldType.GRASS: 2, FieldType.CASTLE: 1, FieldType.FOREST: 1, FieldType.MOUNTAIN: 3,
-                  FieldType.LAKE: 0, FieldType.BOMB: 10}
+                  FieldType.LAKE: 0}
 
 automatic = True
-
-def move_with_command(known_spaces, current_location, command):
-    x, y = current_location
-    new = (x, y)
-
-    if command == CommandType.UP:
-        new = (x, y + 1)
-    elif command == CommandType.DOWN:
-        new = (x, y - 1)
-    elif command == CommandType.LEFT:
-        new = (x - 1, y)
-    elif command == CommandType.RIGHT:
-        new = (x + 1, y)
-    if known_spaces[new] == FieldType.LAKE:
-        return current_location
-    else:
-        return new
-
-
-def index_fields(known_spaces, current_location, data):
-    updated_fields = known_spaces.copy()
-    side_length = math.sqrt(len(data))
-    sight_range = int(side_length / 2)
-    for i in range(0, len(data)):
-        x = current_location[0] - sight_range + int(i % side_length)
-        y = current_location[1] + sight_range - int(i / side_length)
-        updated_fields[(x, y)] = FieldType(data[i])
-    return updated_fields
-
 
 class AlgorithmBasedClient:
     def __init__(self):
         self.my_spaces = {(0, 0): FieldType.CASTLE}
         self.my_location = (0, 0)
-        self.bomb_location = None
+        self.gotScroll = False
+        self.scroll_location = None
+        self.enemy_castle = None
 
     def rec_fields(self, clientsocket):
         data = clientsocket.recv(1024).decode()
@@ -70,42 +42,87 @@ class AlgorithmBasedClient:
             return True
         if len(data) >= 18:
             print("Received Raw Data: ", data)
-            self.my_spaces = index_fields(self.my_spaces, self.my_location, data.replace(" ", ""))
+            self.my_spaces = self.index_fields(self.my_spaces, self.my_location, data)
         else:
             # Lose / Win
             print(data)
             return True
         return False
 
-    def eval_next_step(self):
-        if self.bomb_location is None:
-            for x, y in self.my_spaces.keys():
-                if self.my_spaces[x, y] == "B":
-                    self.bomb_location = (x, y)
-                    print("******Spotted the Scroll******")
+    def move_with_command(self, known_spaces, current_location, command):
+        x, y = current_location
+        new = (x, y)
 
-        if self.bomb_location is not None:
-            self.eval_path_to_scroll()
+        if command == CommandType.UP:
+            new = (x, y + 1)
+        elif command == CommandType.DOWN:
+            new = (x, y - 1)
+        elif command == CommandType.LEFT:
+            new = (x - 1, y)
+        elif command == CommandType.RIGHT:
+            new = (x + 1, y)
+        return new
+
+    def index_fields(self, known_spaces, current_location, data):
+        data = data.replace(" ", "")
+        scroll_index = -1
+        if data.__contains__("B"):
+            scroll_index = data.index("B")-1
+            data = data.replace("B", "")
+
+        updated_fields = known_spaces.copy()
+        side_length = int(math.sqrt(len(data)))
+        sight_range = int(side_length / 2)
+        for i in range(0, len(data)):
+            x = current_location[0] - sight_range + int(i % side_length)
+            y = current_location[1] + sight_range - int(i / side_length)
+            updated_fields[(x, y)] = FieldType(data[i])
+            if i == scroll_index and self.scroll_location is None:
+                self.scroll_location = (x, y)
+        return updated_fields
+
+    def eval_next_step(self):
+        if self.enemy_castle is None:
+            for x, y in self.my_spaces.keys():
+                if self.my_spaces[x, y] == FieldType.CASTLE and (x, y) != (0, 0):
+                    self.enemy_castle = (x, y)
+                    
+        if self.my_location == self.scroll_location:
+            self.gotScroll = True
+
+        if self.scroll_location is not None and not self.gotScroll:
+            return self.eval_path_to_location(self.scroll_location)
+        elif self.enemy_castle is not None and self.gotScroll:
+            return self.eval_path_to_location(self.enemy_castle)
         else:
             return self.eval_most_new_spaces_found()
 
-    def eval_path_to_scroll(self):
-        vector_to_scroll = (self.bomb_location[0] - self.my_location[0], self.bomb_location[1] - self.my_location[1])
+    def eval_path_to_location(self, location):
+        print("\tUsed-Method: Direct path to location")
+        vector_to_scroll = (location[0] - self.my_location[0], location[1] - self.my_location[1])
         later_used_command = random.choice(list(CommandType))
         for command in CommandType:
-            tested_location = move_with_command(self.my_spaces, self.my_location, command)
-            tested_vector = (self.bomb_location[0] - tested_location[0], self.bomb_location[1] - tested_location[1])
+            tested_location = self.move_with_command(self.my_spaces, self.my_location, command)
+            type_of_tested_location = self.my_spaces[tested_location]
+            if type_of_tested_location == FieldType.LAKE:
+                continue
+            print("\tTravel-Option:", command, type_of_tested_location)
+            tested_vector = (location[0] - tested_location[0], location[1] - tested_location[1])
             if abs(tested_vector[0])+abs(tested_vector[1]) < abs(vector_to_scroll[0])+abs(vector_to_scroll[1]):
                 later_used_command = command
         return later_used_command
 
     def eval_most_new_spaces_found(self):
+        print("\tUsed-Method: Search for most new spaces")
         most_new_spaces_found = len(self.my_spaces) - 1
         later_used_command = random.choice(list(CommandType))
         for command in CommandType:
-            tested_location = move_with_command(self.my_spaces, self.my_location, command)
+            tested_location = self.move_with_command(self.my_spaces, self.my_location, command)
             type_of_tested_location = self.my_spaces[tested_location]
-            amt_of_spaces_found = len(index_fields(self.my_spaces, tested_location, "G" * int(
+            if type_of_tested_location == FieldType.LAKE:
+                continue
+            print("\tTravel-Option:", command, type_of_tested_location)
+            amt_of_spaces_found = len(self.index_fields(self.my_spaces, tested_location, "G" * int(
                 pow(sight_for_type[type_of_tested_location] * 2 + 1, 2))))
             if most_new_spaces_found < amt_of_spaces_found:
                 most_new_spaces_found = amt_of_spaces_found
@@ -134,14 +151,16 @@ class AlgorithmBasedClient:
                     clientsocket.close()
                 else:
                     while True:
+                        print("--NEW-ROUND")
                         if self.rec_fields(clientsocket):
                             break
-
-                        print("--NEW-ROUND")
-                        print("\tLocation: ", self.my_location)
+                        print("\tMy Location: ", self.my_location, self.my_spaces[self.my_location])
+                        print("\tScroll Location: ", self.scroll_location)
+                        print("\tEnemy Castle Location: ", self.enemy_castle)
+                        print("\tGot the Scroll: ", self.gotScroll)
                         next_step = self.eval_next_step()
                         print("\tNext Step: ", next_step.value)
-                        self.my_location = move_with_command(self.my_spaces, self.my_location, next_step)
+                        self.my_location = self.move_with_command(self.my_spaces, self.my_location, next_step)
                         if not automatic:
                             msg = input("Send this step to server? (Y/n) ")
                             if msg.lower() == "n" or msg.lower() == "no" or msg.lower() == "nein":
