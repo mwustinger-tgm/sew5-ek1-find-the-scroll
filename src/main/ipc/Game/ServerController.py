@@ -10,7 +10,7 @@ if PyQT:
 else:
     from PySide.QtCore import *
     from PySide.QtGui import *
-    from ipc.Game import ServerView
+    from src.main import ServerView
 
 from enum import Enum
 import random

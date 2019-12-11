@@ -1,0 +1,11 @@
+.cache/
+.coverage
+.idea/
+.tox
+*egg-info
+testreport.html
+__pycache__/
+*egg-info
+build
+docs
+target/
