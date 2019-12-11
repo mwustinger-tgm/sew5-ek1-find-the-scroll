@@ -82,9 +82,15 @@ class AlgorithmBasedClient:
         return updated_fields
 
     def eval_next_step(self):
-        if self.enemy_castle is None:
-            for x, y in self.my_spaces.keys():
-                if self.my_spaces[x, y] == FieldType.CASTLE and (x, y) != (0, 0):
+        for x, y in self.my_spaces.keys():
+            if self.my_spaces[x, y] == FieldType.CASTLE:
+                potential_enemy_castle = (x, y)
+                try:
+                    if not self.is_own_castle(potential_enemy_castle):
+                        self.enemy_castle = (x, y)
+                    else:
+                        self.enemy_castle = None
+                except KeyError:
                     self.enemy_castle = (x, y)
                     
         if self.my_location == self.scroll_location:
@@ -96,6 +102,17 @@ class AlgorithmBasedClient:
             return self.eval_path_to_location(self.enemy_castle)
         else:
             return self.eval_most_new_spaces_found()
+
+    def is_own_castle(self, pec):
+        return self.my_spaces[(pec[0]-1, pec[1]+1)] == self.my_spaces[(-1, 1)] and\
+               self.my_spaces[(pec[0], pec[1]+1)] == self.my_spaces[(0, 1)] and\
+               self.my_spaces[(pec[0]+1, pec[1]+1)] == self.my_spaces[(1, 1)] and\
+               self.my_spaces[(pec[0]-1, pec[1])] == self.my_spaces[(-1, 0)] and\
+               self.my_spaces[(pec[0], pec[1])] == self.my_spaces[(0, 0)] and\
+               self.my_spaces[(pec[0]+1, pec[1])] == self.my_spaces[(1, 0)] and\
+               self.my_spaces[(pec[0]-1, pec[1]-1)] == self.my_spaces[(-1, -1)] and\
+               self.my_spaces[(pec[0], pec[1]-1)] == self.my_spaces[(0, -1)] and\
+               self.my_spaces[(pec[0]+1, pec[1]-1)] == self.my_spaces[(1, -1)]
 
     def eval_path_to_location(self, location):
         print("\tUsed-Method: Direct path to location")
@@ -172,5 +189,6 @@ class AlgorithmBasedClient:
 
 
 if __name__ == "__main__":
-    c = AlgorithmBasedClient()
-    c.connect_to_server()
+    while True:
+        c = AlgorithmBasedClient()
+        c.connect_to_server()

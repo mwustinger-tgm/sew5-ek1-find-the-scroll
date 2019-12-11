@@ -16,6 +16,9 @@ from enum import Enum
 import random
 import time
 
+speed = 0.1
+rows = 10
+cols = 10
 
 class FieldType(Enum):
     GRASS = 0
@@ -31,13 +34,10 @@ class CommandType(Enum):
     DOWN = "down"
     LEFT = "left"
 
-
 class ServerController(QWidget):
     """
     Der Spieleserver
     """
-    rows = 10
-    cols = 10
     errorsignal = Signal((str,))
     msgsignal = Signal()
     pCastle1 = QPalette(Qt.black)
@@ -76,33 +76,33 @@ class ServerController(QWidget):
 
         # Alle Felder auf "Gras" Setzen
         self.field = []
-        for i in range(self.rows):
+        for i in range(rows):
             self.field.append([])
-            for j in range(self.cols):
+            for j in range(cols):
                 self.field[i].append(FieldType.GRASS)
 
         # Burg und Startposition von Spieler 1 setzen
-        x = random.randint(2,3)
-        y = random.randint(2,3)
+        x = random.randint(0, int(rows/2))
+        y = random.randint(0, int(cols/2))
         self.field[x][y] = FieldType.CASTLE1
         self.player1 = (x,y)
         self.player1bomb = False
         # Burg und Startposition von Spieler 2 setzen
-        x = random.randint(6,7)
-        y = random.randint(6,7)
+        x = random.randint(int(rows / 2), rows-1)
+        y = random.randint(int(cols / 2), cols-1)
         self.field[x][y] = FieldType.CASTLE2
         self.player2 = (x,y)
         self.player2bomb = False
 
         # Zufällig 2-10 Teiche platzieren
-        lakes = random.randint(2,10)
+        lakes = random.randint(10,20)
         while lakes > 0:
-            x = random.randint(0,self.rows-1)
-            y = random.randint(0,self.cols-1)
-            xr = (x+1)%self.rows
-            xl = (x-1)%self.rows
-            yu = (y+1)%self.cols
-            yd = (y-1)%self.cols
+            x = random.randint(0,rows-1)
+            y = random.randint(0,cols-1)
+            xr = (x+1)%rows
+            xl = (x-1)%rows
+            yu = (y+1)%cols
+            yd = (y-1)%cols
             area = [self.field[xl][yu], self.field[x][yu], self.field[xr][yu], self.field[xl][y], self.field[x][y], self.field[xr][y], self.field[xl][yd],
                     self.field[x][yd], self.field[xr][yd]]
             # Es dürfen keine zwei Teiche nebeneinander sein
@@ -113,8 +113,8 @@ class ServerController(QWidget):
         # Zufällig 10 bis 20 Waldstücke erstellen
         forests = random.randint(10,20)
         while forests > 0:
-            x = random.randint(0,self.rows-1)
-            y = random.randint(0,self.cols-1)
+            x = random.randint(0,rows-1)
+            y = random.randint(0,cols-1)
             if self.field[x][y] == FieldType.GRASS:
                 self.field[x][y] = FieldType.FOREST
                 forests -= 1
@@ -122,8 +122,8 @@ class ServerController(QWidget):
         # 3 bis 6 Berge erstellen
         mountains = random.randint(3, 6)
         while mountains > 0:
-            x = random.randint(0, self.rows-1)
-            y = random.randint(0, self.cols-1)
+            x = random.randint(0, rows-1)
+            y = random.randint(0, cols-1)
             if self.field[x][y] == FieldType.GRASS:
                 self.field[x][y] = FieldType.MOUNTAIN
                 mountains -= 1
@@ -131,12 +131,12 @@ class ServerController(QWidget):
         # Die Schriftrolle platzieren
         self.bomb = (-1,-1)
         while self.bomb[0]==-1:
-            x = random.randint(0, self.rows-1)
-            y = random.randint(0, self.cols-1)
-            xr = (x+1)%self.rows
-            xl = (x-1)%self.rows
-            yu = (y+1)%self.cols
-            yd = (y-1)%self.cols
+            x = random.randint(0, rows-1)
+            y = random.randint(0, cols-1)
+            xr = (x+1)%rows
+            xl = (x-1)%rows
+            yu = (y+1)%cols
+            yd = (y-1)%cols
             area = [self.field[xl][yu], self.field[x][yu], self.field[xr][yu], self.field[xl][y], self.field[x][y], self.field[xr][y], self.field[xl][yd],
                     self.field[x][yd], self.field[xr][yd]]
             # Die Schriftrolle darf nicht neben einer Burg sein
@@ -155,10 +155,10 @@ class ServerController(QWidget):
             self.bomblabel.deleteLater()
             self.player1label.deleteLater()
             self.player2label.deleteLater()
-        for i in range(self.rows):
-            for j in range(self.cols):
+        for i in range(rows):
+            for j in range(cols):
                 # Jeweiliges Widget ermitteln
-                widget_number = i * self.cols + j+1
+                widget_number = i * cols + j+1
                 widget = getattr(self.myForm, "widget_"+str(widget_number))
                 widget.setAutoFillBackground(True)
 
@@ -271,10 +271,10 @@ class ServerController(QWidget):
         elif self.field[position[0]][position[1]] == FieldType.GRASS:
             sight = 2
 
-        xu = (position[0] - sight) % self.rows
-        xd = (position[0] + sight) % self.rows
-        yl = (position[1] - sight) % self.cols
-        yr = (position[1] + sight) % self.cols
+        xu = (position[0] - sight) % rows
+        xd = (position[0] + sight) % rows
+        yl = (position[1] - sight) % cols
+        yr = (position[1] + sight) % cols
 
         x = xu
         y = yl
@@ -303,9 +303,9 @@ class ServerController(QWidget):
             else:
                 if y == yr:
                     y = yl
-                    x = (x + 1) % self.rows
+                    x = (x + 1) % rows
                 else:
-                    y = (y + 1) % self.cols
+                    y = (y + 1) % cols
         return msg
 
     def game_loop(self):
@@ -324,13 +324,13 @@ class ServerController(QWidget):
             if not skip1:
                 data = self.client1.recv(1024).decode()
                 if data == CommandType.UP.value:
-                    self.player1 = ((self.player1[0]-1) % self.rows, self.player1[1])
+                    self.player1 = ((self.player1[0]-1) % rows, self.player1[1])
                 elif data == CommandType.DOWN.value:
-                    self.player1 = ((self.player1[0]+1) % self.rows, self.player1[1])
+                    self.player1 = ((self.player1[0]+1) % rows, self.player1[1])
                 elif data == CommandType.RIGHT.value:
-                    self.player1 = (self.player1[0],(self.player1[1]+1) % self.cols)
+                    self.player1 = (self.player1[0],(self.player1[1]+1) % cols)
                 elif data == CommandType.LEFT.value:
-                    self.player1 = (self.player1[0],(self.player1[1]-1) % self.cols)
+                    self.player1 = (self.player1[0],(self.player1[1]-1) % cols)
                 if self.field[self.player1[0]][self.player1[1]] == FieldType.MOUNTAIN:
                     skip1 = True
             else:
@@ -338,18 +338,18 @@ class ServerController(QWidget):
             if not skip2:
                 data = self.client2.recv(1024).decode()
                 if data == CommandType.UP.value:
-                    self.player2 = ((self.player2[0]-1) % self.rows, self.player2[1])
+                    self.player2 = ((self.player2[0]-1) % rows, self.player2[1])
                 elif data == CommandType.DOWN.value:
-                    self.player2 = ((self.player2[0]+1) % self.rows, self.player2[1])
+                    self.player2 = ((self.player2[0]+1) % rows, self.player2[1])
                 elif data == CommandType.RIGHT.value:
-                    self.player2 = (self.player2[0],(self.player2[1]+1) % self.cols)
+                    self.player2 = (self.player2[0],(self.player2[1]+1) % cols)
                 elif data == CommandType.LEFT.value:
-                    self.player2 = (self.player2[0],(self.player2[1]-1) % self.cols)
+                    self.player2 = (self.player2[0],(self.player2[1]-1) % cols)
                 if self.field[self.player2[0]][self.player2[1]] == FieldType.MOUNTAIN:
                     skip2 = True
             else:
                 skip2 = False
-            time.sleep(0.5)
+            time.sleep(speed)
             # Pruefen, ob Spieler 1 oder Spieler 2 gewonnen bzw. verloren haben
             check1= self.check_position(self.player1, 1)
             check2= self.check_position(self.player2, 2)
