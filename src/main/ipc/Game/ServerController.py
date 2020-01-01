@@ -16,7 +16,7 @@ from enum import Enum
 import random
 import time
 
-speed = 0.1
+speed = 1
 rows = 10
 cols = 10
 
@@ -95,7 +95,7 @@ class ServerController(QWidget):
         self.player2bomb = False
 
         # Zufällig 2-10 Teiche platzieren
-        lakes = random.randint(10,20)
+        lakes = random.randint(2,10)
         while lakes > 0:
             x = random.randint(0,rows-1)
             y = random.randint(0,cols-1)

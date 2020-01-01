@@ -49,7 +49,7 @@ class AlgorithmBasedClient:
             return True
         return False
 
-    def move_with_command(self, known_spaces, current_location, command):
+    def move_with_command(self, current_location, command):
         x, y = current_location
         new = (x, y)
 
@@ -86,7 +86,7 @@ class AlgorithmBasedClient:
             if self.my_spaces[x, y] == FieldType.CASTLE:
                 potential_enemy_castle = (x, y)
                 try:
-                    if not self.is_own_castle(potential_enemy_castle):
+                    if not self.is_own_castle(self.my_spaces, potential_enemy_castle):
                         self.enemy_castle = (x, y)
                     else:
                         self.enemy_castle = None
@@ -103,23 +103,23 @@ class AlgorithmBasedClient:
         else:
             return self.eval_most_new_spaces_found()
 
-    def is_own_castle(self, pec):
-        return self.my_spaces[(pec[0]-1, pec[1]+1)] == self.my_spaces[(-1, 1)] and\
-               self.my_spaces[(pec[0], pec[1]+1)] == self.my_spaces[(0, 1)] and\
-               self.my_spaces[(pec[0]+1, pec[1]+1)] == self.my_spaces[(1, 1)] and\
-               self.my_spaces[(pec[0]-1, pec[1])] == self.my_spaces[(-1, 0)] and\
-               self.my_spaces[(pec[0], pec[1])] == self.my_spaces[(0, 0)] and\
-               self.my_spaces[(pec[0]+1, pec[1])] == self.my_spaces[(1, 0)] and\
-               self.my_spaces[(pec[0]-1, pec[1]-1)] == self.my_spaces[(-1, -1)] and\
-               self.my_spaces[(pec[0], pec[1]-1)] == self.my_spaces[(0, -1)] and\
-               self.my_spaces[(pec[0]+1, pec[1]-1)] == self.my_spaces[(1, -1)]
+    def is_own_castle(self, known_spaces, pec):
+        return known_spaces[(pec[0]-1, pec[1]+1)] == known_spaces[(-1, 1)] and\
+               known_spaces[(pec[0], pec[1]+1)] == known_spaces[(0, 1)] and\
+               known_spaces[(pec[0]+1, pec[1]+1)] == known_spaces[(1, 1)] and\
+               known_spaces[(pec[0]-1, pec[1])] == known_spaces[(-1, 0)] and\
+               known_spaces[(pec[0], pec[1])] == known_spaces[(0, 0)] and\
+               known_spaces[(pec[0]+1, pec[1])] == known_spaces[(1, 0)] and\
+               known_spaces[(pec[0]-1, pec[1]-1)] == known_spaces[(-1, -1)] and\
+               known_spaces[(pec[0], pec[1]-1)] == known_spaces[(0, -1)] and\
+               known_spaces[(pec[0]+1, pec[1]-1)] == known_spaces[(1, -1)]
 
     def eval_path_to_location(self, location):
         print("\tUsed-Method: Direct path to location")
         vector_to_scroll = (location[0] - self.my_location[0], location[1] - self.my_location[1])
         later_used_command = random.choice(list(CommandType))
         for command in CommandType:
-            tested_location = self.move_with_command(self.my_spaces, self.my_location, command)
+            tested_location = self.move_with_command(self.my_location, command)
             type_of_tested_location = self.my_spaces[tested_location]
             if type_of_tested_location == FieldType.LAKE:
                 continue
@@ -134,7 +134,7 @@ class AlgorithmBasedClient:
         most_new_spaces_found = len(self.my_spaces) - 1
         later_used_command = random.choice(list(CommandType))
         for command in CommandType:
-            tested_location = self.move_with_command(self.my_spaces, self.my_location, command)
+            tested_location = self.move_with_command(self.my_location, command)
             type_of_tested_location = self.my_spaces[tested_location]
             if type_of_tested_location == FieldType.LAKE:
                 continue
@@ -177,7 +177,7 @@ class AlgorithmBasedClient:
                         print("\tGot the Scroll: ", self.gotScroll)
                         next_step = self.eval_next_step()
                         print("\tNext Step: ", next_step.value)
-                        self.my_location = self.move_with_command(self.my_spaces, self.my_location, next_step)
+                        self.my_location = self.move_with_command(self.my_location, next_step)
                         if not automatic:
                             msg = input("Send this step to server? (Y/n) ")
                             if msg.lower() == "n" or msg.lower() == "no" or msg.lower() == "nein":
@@ -189,6 +189,5 @@ class AlgorithmBasedClient:
 
 
 if __name__ == "__main__":
-    while True:
-        c = AlgorithmBasedClient()
-        c.connect_to_server()
+    c = AlgorithmBasedClient()
+    c.connect_to_server()
